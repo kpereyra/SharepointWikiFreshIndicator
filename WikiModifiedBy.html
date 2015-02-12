@@ -1,0 +1,62 @@
+<html>
+<!-- ===================================================================
+     To use this file, place it in your Sharepoint site's SiteAssets document library. 
+     Make sure that the relative jquery path is available.
+     Include the file in Content Editor Web Part (CEWP)
+     =================================================================== -->
+<head>  
+    <script src="/_layouts/jquery/jquery-1.10.2.min.js"></script>
+    <style type="text/css">
+      .freshIndicator
+      {
+          font-size:small;
+          color:#1E076A;
+          position: relative; 
+          top: -20px;
+          display: block;
+      }
+    </style>
+    <script type="text/javascript">
+    
+    $(document).ready(function() {   
+        GetEditorAndDate();
+    });  // end document-ready
+    
+        
+    function GetEditorAndDate()
+    {
+        var relativePageURL = _spPageContextInfo.serverRequestPath;
+        var siteURL = _spPageContextInfo.webAbsoluteUrl; 
+        var profileUrl = "http://mysites.MYCOMPANY.com/Person.aspx?accountname="; <!-- fill in with your own mysites/profile url -->
+        
+        var query = siteURL + "/_api/web/getfilebyserverrelativeurl('/"+ relativePageURL +"')?$select=TimeLastModified,ModifiedBy/Title,ModifiedBy/LoginName&$expand=ModifiedBy";
+                
+        var call = $.ajax({
+            url: query,
+            type: "GET",
+            dataType: "json",
+            headers: {
+                Accept: "application/json;odata=verbose"
+            }       
+        });
+        call.done( (function (data, textStatus, err){
+          rawModifedBy = data.d.ModifiedBy.Title
+          prettiedModifiedBy = rawModifedBy.split(', ')[1]+' '+ rawModifedBy.split(', ')[0]
+          
+          rawModifiedId=data.d.ModifiedBy.LoginName; //<d:LoginName>i:0#.w|klasj\kpereyra</d:LoginName>
+          var modifiedId= rawModifiedId.replace('i:0#.w|', '') <!-- needed only if your data returns in the format <d:LoginName>i:0#.w|DOMAIN\USERNAME</d:LoginName> -->
+          
+          var rawModifedDate = new Date(data.d.TimeLastModified);
+          var mm = rawModifedDate.getMonth()+1; //January is 0
+          var modifedDate = mm+'/'+rawModifedDate.getDate()+'/'+rawModifedDate.getFullYear();;   //"11/19/2014";  // trying to keep this small; moment.js would be perfectly OK here too.
+          
+          var linkedName = '<a href="'+profileUrl+modifiedId+'">'+ prettiedModifiedBy +'</a>'
+          var aboveFooter = '<div id="freshIndicator" style="width: 500px;margin-left: auto;margin-right: auto;"> Page updated by '+ linkedName +' on '+ modifedDate +'</div>'
+          $("#footer").prepend(aboveFooter); <!-- assumes a footer with the id "footer".  If you don't have one, put it after the end script tag. -->
+        }));
+        call.fail(function (err,textStatus,errorThrown){
+            console.log(err);
+        });
+    }
+    </script>
+</head>
