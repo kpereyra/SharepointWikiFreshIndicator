@@ -1,0 +1,87 @@
+<html>
+<!-- ===================================================================
+     To use this file, place it in your Sharepoint site's SiteAssets document library along with the img folder 
+     Make sure that the relative jquery path is available.
+     Include the file in Content Editor Web Part (CEWP)
+     =================================================================== -->
+<head>  
+    <script src="/_layouts/jquery/jquery-1.10.2.min.js"></script>
+    <style type="text/css">
+      .freshIndicator
+      {
+          font-size:small;
+          position: relative; 
+          top: -20px;
+          display: block;
+      }
+    </style>
+    <script type="text/javascript">
+    
+    
+    $(document).ready(function() {   
+        GetEditorAndDate();
+    });  // end document-ready
+    
+    function GetIconAndDescription(ageInDays) {
+      freshLimit = 180;
+      staleLimit = 365;
+      
+      freshIcon = "/SiteAssets/img/GreenLeaf_16px.jpg";
+      semiStaleIcon = "/SiteAssets/img/YellowOrangeLeaf_16px.jpg";
+      staleIcon = "/SiteAssets/img/BrownLeaf_16px.jpg";
+      
+      freshDesc = "Fresh"
+      semiStaleDesc = "A little stale"
+      staleDesc = "Stale, over a year since update"
+      
+      if (ageInDays > freshLimit) {
+        if (ageInDays > staleLimit) {
+          return '<img src="'+staleIcon+'" alt="'+staleDesc+'" title="'+staleDesc+'">';
+        }
+        else {
+          return '<img src="'+semiStaleIcon+'" alt="'+semiStaleDesc+'" title="'+semiStaleDesc+'">';
+        }
+      }
+      else {
+        return '<img src="'+freshIcon+'" alt="'+freshDesc+'" title="'+freshDesc+'">';
+      }
+    }
+        
+    function GetEditorAndDate()
+    {
+        var relativePageURL = _spPageContextInfo.serverRequestPath;
+        var siteURL = _spPageContextInfo.webAbsoluteUrl; 
+        var profileUrl = "http://mysites.kla-tencor.com/Person.aspx?accountname="; <!-- fill in with your own mysites/profile url -->
+        
+        var query = siteURL + "/_api/web/getfilebyserverrelativeurl('/"+ relativePageURL +"')?$select=TimeLastModified,ModifiedBy/Title,ModifiedBy/LoginName&$expand=ModifiedBy";
+                
+        var call = $.ajax({
+            url: query,
+            type: "GET",
+            dataType: "json",
+            headers: {
+                Accept: "application/json;odata=verbose"
+            }       
+        });
+        call.done( (function (data, textStatus, err){
+          var rawModifedBy = data.d.ModifiedBy.Title
+          var modifiedBy = rawModifedBy.split(', ')[1]+' '+ rawModifedBy.split(', ')[0]
+          
+          var rawModifiedId=data.d.ModifiedBy.LoginName; 
+          var modifiedId= rawModifiedId.replace('i:0#.w|', '') <!-- needed only if your data returns in the format <d:LoginName>i:0#.w|DOMAIN\USERNAME</d:LoginName> -->
+          
+          var rawModifedDate = new Date(data.d.TimeLastModified);
+          var mm = rawModifedDate.getMonth()+1; //because January is 0
+          var ageInDays = (new Date()-rawModifedDate)/(60*60*24*1000);
+          var modifedDate = mm+'/'+rawModifedDate.getDate()+'/'+rawModifedDate.getFullYear();;   <!-- "11/19/2014" format. Trying to keep this in a single file; moment.js would be perfectly OK here too.-->
+          
+          var linkedName = '<a href="'+profileUrl+modifiedId+'">'+ modifiedBy +'</a>'
+          var aboveFooter = '<div id="freshIndicator" style="width: 500px;margin-left: auto;margin-right: auto;">'+GetIconAndDescription(ageInDays) + ' Page updated by '+ linkedName +' on '+ modifedDate +'</div>'
+          $("#footer").prepend(aboveFooter); <!-- assumes a footer with the id "footer".  If you don't have one, put it after the end script tag. -->
+        }));
+        call.fail(function (err,textStatus,errorThrown){
+            console.log(err);
+        });
+    }
+    </script>
+</head>
